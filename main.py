@@ -116,8 +116,9 @@ def run(args: DictConfig):
     print("Model initialized")
     
     # 加载预训练权重
-    pretrained_weights = torch.load('pretrained_model.pth')
+    pretrained_weights = torch.load('content/drive/MyDrive/DL/最終課題/dl_lecture_competition_pub-MEG-competition/outputs/pretrained_model.pth')
     model.load_state_dict(pretrained_weights, strict=False) 
+    print("Pretrained weights loaded")
 
     # ------------------
     #     Optimizer
