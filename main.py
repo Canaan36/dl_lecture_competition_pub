@@ -86,6 +86,7 @@ def run(args: DictConfig):
     num_classes = train_set.num_classes
     seq_len = train_set.seq_len
     num_channels = train_set.num_channels
+    num_subjects = len(torch.unique(train_set.subject_idxs))
     train_set = preprocess_dataset(train_set, has_subject_idxs=True)
     train_loader = torch.utils.data.DataLoader(train_set, shuffle=True, **loader_args)
     
@@ -112,13 +113,14 @@ def run(args: DictConfig):
     #    train_set.num_classes, train_set.seq_len, train_set.num_channels
     #).to(args.device)
     #model = BasicConvClassifier(train_set[0][0].shape[0], train_set[0][0].shape[1], len(train_set)).to(device)
-    model = BasicConvClassifier(num_classes, seq_len, num_channels).to(device)
+    model = BasicConvClassifier(num_classes, seq_len, num_channels, num_subjects).to(device)
     print("Model initialized")
     
     # 加载预训练权重
-    pretrained_weights = torch.load('content/drive/MyDrive/DL/最終課題/dl_lecture_competition_pub-MEG-competition/outputs/pretrained_model.pth')
-    model.load_state_dict(pretrained_weights, strict=False) 
-    print("Pretrained weights loaded")
+    #pretrained_weights = torch.load('content/drive/MyDrive/DL/最終課題/dl_lecture_competition_pub-MEG-competition/outputs/pretrained_model.pth')
+    #model.load_state_dict(pretrained_weights, strict=False) 
+    #print("Pretrained weights loaded")
+
 
     # ------------------
     #     Optimizer
@@ -148,9 +150,11 @@ def run(args: DictConfig):
         
         model.train()
         for X, y, subject_idxs in tqdm(train_loader, desc="Train"):
-            X, y = X.to(args.device), y.to(args.device)
+            #X, y = X.to(args.device), y.to(args.device)
+            X, y, subject_idxs = X.to(device), y.to(device), subject_idxs.to(device)
 
-            y_pred = model(X)
+            #y_pred = model(X)
+            y_pred = model(X, subject_idxs)
             
             loss = F.cross_entropy(y_pred, y)
             train_loss.append(loss.item())
@@ -164,10 +168,12 @@ def run(args: DictConfig):
 
         model.eval()
         for X, y, subject_idxs in tqdm(val_loader, desc="Validation"):
-            X, y = X.to(args.device), y.to(args.device)
+            #X, y = X.to(args.device), y.to(args.device)
+            X, y, subject_idxs = X.to(device), y.to(device), subject_idxs.to(device)
             
             with torch.no_grad():
-                y_pred = model(X)
+                #y_pred = model(X)
+                y_pred = model(X, subject_idxs)
             
             val_loss.append(F.cross_entropy(y_pred, y).item())
             val_acc.append(accuracy(y_pred, y).item())
@@ -203,7 +209,8 @@ def run(args: DictConfig):
     preds = [] 
     model.eval()
     for X, subject_idxs in tqdm(test_loader, desc="Validation"):        
-        preds.append(model(X.to(args.device)).detach().cpu())
+        #preds.append(model(X.to(args.device)).detach().cpu())
+        preds.append(model(X.to(device), subject_idxs.to(device)).detach().cpu())
         
     preds = torch.cat(preds, dim=0).numpy()
     np.save(os.path.join(logdir, "submission"), preds)

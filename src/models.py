@@ -10,6 +10,7 @@ class BasicConvClassifier(nn.Module):
         num_classes: int,
         seq_len: int,
         in_channels: int,
+        num_subjects: int, #new
         hid_dim: int = 128
         #hid_dim: int = 256  # 增加隐藏层维度
     ) -> None:
@@ -21,21 +22,27 @@ class BasicConvClassifier(nn.Module):
             #ConvBlock(hid_dim, hid_dim),  # 增加卷积层
         )
 
+        self.subject_embedding = nn.Embedding(num_subjects, hid_dim)#new
         self.head = nn.Sequential(
             nn.AdaptiveAvgPool1d(1),
             Rearrange("b d 1 -> b d"),
-            nn.Linear(hid_dim, num_classes),
+            #nn.Linear(hid_dim, num_classes),
+            nn.Linear(hid_dim*2, num_classes),#new
         )
 
-    def forward(self, X: torch.Tensor) -> torch.Tensor:
+    #def forward(self, X: torch.Tensor) -> torch.Tensor:
         """_summary_
         Args:
             X ( b, c, t ): _description_
         Returns:
             X ( b, num_classes ): _description_
         """
-        X = self.blocks(X)
 
+    def forward(self, X: torch.Tensor, subject_idx: torch.Tensor) -> torch.Tensor:
+        X = self.blocks(X)
+        subject_emb = self.subject_embedding(subject_idx)
+        subject_emb = subject_emb.unsqueeze(2).expand(-1, -1, X.size(2))  # Expand to match the sequence length
+        X = torch.cat((X, subject_emb), dim=1)
         return self.head(X)
         
     def load_pretrained_weights(self, weight_path: str) -> None:

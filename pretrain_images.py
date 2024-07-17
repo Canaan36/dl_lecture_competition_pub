@@ -11,6 +11,7 @@ import time
 import matplotlib.pyplot as plt  
 from src.models import BasicConvClassifier
 from einops.layers.torch import Rearrange
+from torch.optim.lr_scheduler import ReduceLROnPlateau
 
 print("Current working directory:", os.getcwd())
 
@@ -63,20 +64,21 @@ transform = transforms.Compose([
 print("Loading train set...")
 #train_dataset = CustomImageDataset(img_dir='/content/drive/MyDrive/DL/最終課題/dl_lecture_competition_pub-MEG-competition/data/Images', img_paths=train_image_paths, transform=transform)
 train_dataset = CustomImageDataset(img_dir='/content/drive/MyDrive/DL/最終課題/dl_lecture_competition_pub-MEG-competition/data/Images', img_paths=train_image_paths, labels=train_labels, transform=transform)
-#train_subset = Subset(train_dataset, range(0, len(train_dataset), 5))  # 使用子集进行训练
-train_loader = DataLoader(train_dataset, batch_size=32, shuffle=True, num_workers=8)  # 增加 num_workers
+train_subset = Subset(train_dataset, range(0, len(train_dataset), 10))  # 使用子集进行训练
+train_loader = DataLoader(train_subset, batch_size=32, shuffle=True, num_workers=8)  # 增加 num_workers
 
 print("Loading val set...")
 #val_dataset = CustomImageDataset(img_dir='/content/drive/MyDrive/DL/最終課題/dl_lecture_competition_pub-MEG-competition/data/Images', img_paths=val_image_paths, transform=transform)
 val_dataset = CustomImageDataset(img_dir='/content/drive/MyDrive/DL/最終課題/dl_lecture_competition_pub-MEG-competition/data/Images', img_paths=val_image_paths, labels=val_labels, transform=transform)
-#val_subset = Subset(val_dataset, range(0, len(val_dataset), 5))  # 使用子集进行验证
-val_loader = DataLoader(val_dataset, batch_size=32, shuffle=False, num_workers=8)  # 增加 num_workers
+val_subset = Subset(val_dataset, range(0, len(val_dataset), 10))  # 使用子集进行验证
+val_loader = DataLoader(val_subset, batch_size=32, shuffle=False, num_workers=8)  # 增加 num_workers
 
 # 加载预训练模型（如ResNet）
 #model = models.resnet50(pretrained=True)
 # 加载预训练模型 BasicConvClassifier
 num_classes = len(label_to_idx)
-model = BasicConvClassifier(num_classes=num_classes, seq_len=224, in_channels=3)
+num_subjects = 4  # Dummy value for num_subjects as it's not used in pretraining
+model = BasicConvClassifier(num_classes=num_classes, seq_len=224, in_channels=3, num_subjects=num_subjects)
 
 # 修改最后一层以适应我们的任务
 #num_ftrs = model.fc.in_features
@@ -92,8 +94,11 @@ criterion = nn.CrossEntropyLoss()
 #optimizer = torch.optim.Adam(model.parameters(), lr=0.001)
 optimizer = torch.optim.Adam(filter(lambda p: p.requires_grad, model.parameters()), lr=0.0001)  # 调整学习率
 
+# 定义学习率调度器
+scheduler = ReduceLROnPlateau(optimizer, mode='min', factor=0.1, patience=10, verbose=True)
+
 # 训练模型
-num_epochs = 20
+num_epochs = 5
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 model = model.to(device)
 
@@ -107,7 +112,8 @@ for epoch in range(num_epochs):
         #labels = torch.randint(0, 1854, (inputs.size(0),)).to(device)  # 生成随机标签
         inputs, labels = inputs.to(device), labels.to(device)
         optimizer.zero_grad()
-        outputs = model(inputs)
+        #outputs = model(inputs)
+        outputs = model(inputs, torch.zeros(inputs.size(0), dtype=torch.long).to(device))  # Dummy subject_idxs
         loss = criterion(outputs, labels)
         loss.backward()
         optimizer.step()
@@ -116,6 +122,21 @@ for epoch in range(num_epochs):
     epoch_loss = running_loss / len(train_loader.dataset)
     end_time = time.time()
     print(f'Epoch {epoch+1}/{num_epochs}, Loss: {epoch_loss:.4f}, Time: {end_time - start_time:.2f} seconds')
+    
+    # 验证步骤
+    model.eval()
+    val_loss = 0.0
+    with torch.no_grad():
+        for inputs, labels in val_loader:
+            inputs, labels = inputs.to(device), labels.to(device)
+            outputs = model(inputs, torch.zeros(inputs.size(0), dtype=torch.long).to(device))  # Dummy subject_idxs
+            loss = criterion(outputs, labels)
+            val_loss += loss.item() * inputs.size(0)
+    val_loss /= len(val_loader.dataset)
+    print(f'Validation Loss: {val_loss:.4f}')
+    
+    # 学习率调度器步骤
+    scheduler.step(val_loss)
 
 # 保存预训练模型的权重
 torch.save(model.state_dict(), 'pretrained_model.pth')

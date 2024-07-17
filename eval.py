@@ -70,7 +70,7 @@ def run(args: DictConfig):
     seq_len = test_set.seq_len
     num_channels = test_set.num_channels
     
-    test_set = preprocess_dataset(test_set, has_subject_idxs=False)
+    test_set = preprocess_dataset(test_set, has_subject_idxs=True)
     test_loader = torch.utils.data.DataLoader(
         test_set, shuffle=False, batch_size=args.batch_size, num_workers=args.num_workers
     )
@@ -88,7 +88,7 @@ def run(args: DictConfig):
     # ------------------ 
     preds = [] 
     model.eval()
-    for X, subject_idxs in tqdm(test_loader, desc="Validation"):        
+    for X, _, subject_idxs in tqdm(test_loader, desc="Validation"):        
         preds.append(model(X.to(args.device)).detach().cpu())
         
     preds = torch.cat(preds, dim=0).numpy()
