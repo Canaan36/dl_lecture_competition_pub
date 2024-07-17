@@ -9,6 +9,8 @@ from torchvision import models
 from tqdm import tqdm
 import time
 import matplotlib.pyplot as plt  
+from src.models import BasicConvClassifier
+from einops.layers.torch import Rearrange
 
 print("Current working directory:", os.getcwd())
 
@@ -55,6 +57,7 @@ transform = transforms.Compose([
     transforms.Resize((224, 224)),
     transforms.ToTensor(),
     transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
+    Rearrange('c h w -> c (h w)')  # 将图像从 (C, H, W) 转换为 (C, H * W)
 ])
 
 print("Loading train set...")
@@ -70,12 +73,15 @@ val_dataset = CustomImageDataset(img_dir='/content/drive/MyDrive/DL/最終課題
 val_loader = DataLoader(val_dataset, batch_size=32, shuffle=False, num_workers=8)  # 增加 num_workers
 
 # 加载预训练模型（如ResNet）
-model = models.resnet50(pretrained=True)
+#model = models.resnet50(pretrained=True)
+# 加载预训练模型 BasicConvClassifier
+num_classes = len(label_to_idx)
+model = BasicConvClassifier(num_classes=num_classes, seq_len=224, in_channels=3)
 
 # 修改最后一层以适应我们的任务
-num_ftrs = model.fc.in_features
+#num_ftrs = model.fc.in_features
 #model.fc = nn.Linear(num_ftrs, 1854)  # 1854 是类别数
-model.fc = nn.Linear(num_ftrs, len(label_to_idx))  # 使用标签数作为输出
+#model.fc = nn.Linear(num_ftrs, len(label_to_idx))  # 使用标签数作为输出
 
 # 冻结预训练模型的大部分层，只训练最后几层
 #for param in list(model.parameters())[:-10]:
