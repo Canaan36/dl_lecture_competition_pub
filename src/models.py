@@ -11,12 +11,14 @@ class BasicConvClassifier(nn.Module):
         seq_len: int,
         in_channels: int,
         hid_dim: int = 128
+        #hid_dim: int = 256  # 增加隐藏层维度
     ) -> None:
         super().__init__()
 
         self.blocks = nn.Sequential(
             ConvBlock(in_channels, hid_dim),
             ConvBlock(hid_dim, hid_dim),
+            #ConvBlock(hid_dim, hid_dim),  # 增加卷积层
         )
 
         self.head = nn.Sequential(
@@ -44,6 +46,7 @@ class ConvBlock(nn.Module):
         out_dim,
         kernel_size: int = 3,
         p_drop: float = 0.1,
+        #p_drop: float = 0.2,  # 增加 Dropout 概率
     ) -> None:
         super().__init__()
         

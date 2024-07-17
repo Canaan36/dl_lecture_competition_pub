@@ -20,6 +20,9 @@ def run(args: DictConfig):
     set_seed(args.seed)
     savedir = os.path.dirname(args.model_path)
     
+    # 手动设置 data_dir 绝对路径
+    args.data_dir = "/content/drive/MyDrive/DL/最終課題/dl_lecture_competition_pub-MEG-competition/data"
+    
     # ------------------
     #    Dataloader
     # ------------------    
