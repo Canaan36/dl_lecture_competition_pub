@@ -8,11 +8,47 @@ from omegaconf import DictConfig
 import wandb
 from termcolor import cprint
 from tqdm import tqdm
+from scipy.signal import resample, butter, filtfilt
 
 from src.datasets import ThingsMEGDataset
 from src.models import BasicConvClassifier
 from src.utils import set_seed
 
+def preprocess_data(X, resample_rate=250, lowcut=0.5, highcut=40.0, fs=1000.0):
+    # 重采样
+    X_resampled = resample(X, int(X.shape[1] * resample_rate / fs), axis=1)
+    
+    # 滤波
+    nyquist = 0.5 * resample_rate
+    low = lowcut / nyquist
+    high = highcut / nyquist
+    b, a = butter(1, [low, high], btype='band')
+    X_filtered = filtfilt(b, a, X_resampled, axis=1)
+    
+    # 缩放
+    X_scaled = (X_filtered - np.mean(X_filtered, axis=1, keepdims=True)) / np.std(X_filtered, axis=1, keepdims=True)
+    
+    # 基线校正
+    baseline = np.mean(X_scaled[:, :int(0.2 * resample_rate)], axis=1, keepdims=True)
+    X_corrected = X_scaled - baseline
+    
+    # 转换数据类型为 Float
+    X_corrected = X_corrected.astype(np.float32)
+    
+    return X_corrected
+
+def preprocess_dataset(dataset, has_subject_idxs=True):
+    processed_data = []
+    for data in tqdm(dataset, desc="Preprocessing data"):
+        if has_subject_idxs:
+            X, y, subject_idxs = data
+            X = preprocess_data(X)
+            processed_data.append((X, y, subject_idxs))
+        else:
+            X, y = data
+            X = preprocess_data(X)
+            processed_data.append((X, y))
+    return processed_data
 
 @torch.no_grad()
 @hydra.main(version_base=None, config_path="configs", config_name="config")
@@ -25,8 +61,16 @@ def run(args: DictConfig):
     
     # ------------------
     #    Dataloader
-    # ------------------    
+    # ------------------   
+    print("Loading test set...")
     test_set = ThingsMEGDataset("test", args.data_dir)
+    print(f"Test set loaded with {len(test_set)} samples")
+    
+    num_classes = test_set.num_classes
+    seq_len = test_set.seq_len
+    num_channels = test_set.num_channels
+    
+    test_set = preprocess_dataset(test_set, has_subject_idxs=False)
     test_loader = torch.utils.data.DataLoader(
         test_set, shuffle=False, batch_size=args.batch_size, num_workers=args.num_workers
     )
@@ -35,7 +79,7 @@ def run(args: DictConfig):
     #       Model
     # ------------------
     model = BasicConvClassifier(
-        test_set.num_classes, test_set.seq_len, test_set.num_channels
+        num_classes, seq_len, num_channels
     ).to(args.device)
     model.load_state_dict(torch.load(args.model_path, map_location=args.device))
 

@@ -37,6 +37,10 @@ class BasicConvClassifier(nn.Module):
         X = self.blocks(X)
 
         return self.head(X)
+        
+    def load_pretrained_weights(self, weight_path: str) -> None:
+        pretrained_weights = torch.load(weight_path)
+        self.load_state_dict(pretrained_weights, strict=False)  # 严格模式为False，允许部分权重不匹配
 
 
 class ConvBlock(nn.Module):

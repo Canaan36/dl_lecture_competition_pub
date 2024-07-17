@@ -114,6 +114,10 @@ def run(args: DictConfig):
     #model = BasicConvClassifier(train_set[0][0].shape[0], train_set[0][0].shape[1], len(train_set)).to(device)
     model = BasicConvClassifier(num_classes, seq_len, num_channels).to(device)
     print("Model initialized")
+    
+    # 加载预训练权重
+    pretrained_weights = torch.load('pretrained_model.pth')
+    model.load_state_dict(pretrained_weights, strict=False) 
 
     # ------------------
     #     Optimizer
