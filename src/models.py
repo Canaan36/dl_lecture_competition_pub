@@ -45,9 +45,16 @@ class BasicConvClassifier(nn.Module):
         X = torch.cat((X, subject_emb), dim=1)
         return self.head(X)
         
+    #def load_pretrained_weights(self, weight_path: str) -> None:
+    #    pretrained_weights = torch.load(weight_path)
+    #    self.load_state_dict(pretrained_weights, strict=False)  # 严格模式为False，允许部分权重不匹配
+    
     def load_pretrained_weights(self, weight_path: str) -> None:
         pretrained_weights = torch.load(weight_path)
-        self.load_state_dict(pretrained_weights, strict=False)  # 严格模式为False，允许部分权重不匹配
+        model_dict = self.state_dict()
+        pretrained_dict = {k: v for k, v in pretrained_weights.items() if k in model_dict and v.size() == model_dict[k].size()}
+        model_dict.update(pretrained_dict)
+        self.load_state_dict(model_dict)
 
 
 class ConvBlock(nn.Module):

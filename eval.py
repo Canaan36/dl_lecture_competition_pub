@@ -40,14 +40,14 @@ def preprocess_data(X, resample_rate=250, lowcut=0.5, highcut=40.0, fs=1000.0):
 def preprocess_dataset(dataset, has_subject_idxs=True):
     processed_data = []
     for data in tqdm(dataset, desc="Preprocessing data"):
-        if has_subject_idxs:
-            X, y, subject_idxs = data
+        if has_subject_idxs and len(data) == 2:
+            X, subject_idxs = data
             X = preprocess_data(X)
-            processed_data.append((X, y, subject_idxs))
+            processed_data.append((X, subject_idxs))
         else:
-            X, y = data
+            X = data
             X = preprocess_data(X)
-            processed_data.append((X, y))
+            processed_data.append((X,))
     return processed_data
 
 @torch.no_grad()
@@ -69,6 +69,7 @@ def run(args: DictConfig):
     num_classes = test_set.num_classes
     seq_len = test_set.seq_len
     num_channels = test_set.num_channels
+    num_subjects = len(torch.unique(test_set.subject_idxs))
     
     test_set = preprocess_dataset(test_set, has_subject_idxs=True)
     test_loader = torch.utils.data.DataLoader(
@@ -79,7 +80,7 @@ def run(args: DictConfig):
     #       Model
     # ------------------
     model = BasicConvClassifier(
-        num_classes, seq_len, num_channels
+        num_classes, seq_len, num_channels, num_subjects
     ).to(args.device)
     model.load_state_dict(torch.load(args.model_path, map_location=args.device))
 
@@ -88,8 +89,20 @@ def run(args: DictConfig):
     # ------------------ 
     preds = [] 
     model.eval()
-    for X, _, subject_idxs in tqdm(test_loader, desc="Validation"):        
-        preds.append(model(X.to(args.device)).detach().cpu())
+    #for X, _, subject_idxs in tqdm(test_loader, desc="Validation"):        
+    #    preds.append(model(X.to(args.device)).detach().cpu())
+    for batch in tqdm(test_loader, desc="Validation"):
+        if len(batch) == 2:
+            X, subject_idxs = batch
+            subject_idxs = subject_idxs.to(args.device)
+        else:
+            X, = batch
+            subject_idxs = None
+            
+        if subject_idxs is not None:
+            preds.append(model(X.to(args.device), subject_idxs).detach().cpu())
+        else:
+            preds.append(model(X.to(args.device)).detach().cpu())
         
     preds = torch.cat(preds, dim=0).numpy()
     np.save(os.path.join(savedir, "submission"), preds)

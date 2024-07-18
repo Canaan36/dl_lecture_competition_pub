@@ -64,14 +64,14 @@ transform = transforms.Compose([
 print("Loading train set...")
 #train_dataset = CustomImageDataset(img_dir='/content/drive/MyDrive/DL/最終課題/dl_lecture_competition_pub-MEG-competition/data/Images', img_paths=train_image_paths, transform=transform)
 train_dataset = CustomImageDataset(img_dir='/content/drive/MyDrive/DL/最終課題/dl_lecture_competition_pub-MEG-competition/data/Images', img_paths=train_image_paths, labels=train_labels, transform=transform)
-train_subset = Subset(train_dataset, range(0, len(train_dataset), 10))  # 使用子集进行训练
-train_loader = DataLoader(train_subset, batch_size=32, shuffle=True, num_workers=8)  # 增加 num_workers
+#train_subset = Subset(train_dataset, range(0, len(train_dataset), 10))  # 使用子集进行训练
+train_loader = DataLoader(train_dataset, batch_size=32, shuffle=True, num_workers=8)  # 增加 num_workers
 
 print("Loading val set...")
 #val_dataset = CustomImageDataset(img_dir='/content/drive/MyDrive/DL/最終課題/dl_lecture_competition_pub-MEG-competition/data/Images', img_paths=val_image_paths, transform=transform)
 val_dataset = CustomImageDataset(img_dir='/content/drive/MyDrive/DL/最終課題/dl_lecture_competition_pub-MEG-competition/data/Images', img_paths=val_image_paths, labels=val_labels, transform=transform)
-val_subset = Subset(val_dataset, range(0, len(val_dataset), 10))  # 使用子集进行验证
-val_loader = DataLoader(val_subset, batch_size=32, shuffle=False, num_workers=8)  # 增加 num_workers
+#val_subset = Subset(val_dataset, range(0, len(val_dataset), 10))  # 使用子集进行验证
+val_loader = DataLoader(val_dataset, batch_size=32, shuffle=False, num_workers=8)  # 增加 num_workers
 
 # 加载预训练模型（如ResNet）
 #model = models.resnet50(pretrained=True)
@@ -98,7 +98,7 @@ optimizer = torch.optim.Adam(filter(lambda p: p.requires_grad, model.parameters(
 scheduler = ReduceLROnPlateau(optimizer, mode='min', factor=0.1, patience=10, verbose=True)
 
 # 训练模型
-num_epochs = 5
+num_epochs = 10
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 model = model.to(device)
 

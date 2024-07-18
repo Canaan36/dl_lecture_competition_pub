@@ -84,8 +84,11 @@ def run(args: DictConfig):
     print(f"Train set loaded with {len(train_set)} samples")
     #print("Train set sample:", train_set[0])
     num_classes = train_set.num_classes
+    print(num_classes)
     seq_len = train_set.seq_len
+    print(seq_len)
     num_channels = train_set.num_channels
+    print(num_channels)
     num_subjects = len(torch.unique(train_set.subject_idxs))
     train_set = preprocess_dataset(train_set, has_subject_idxs=True)
     train_loader = torch.utils.data.DataLoader(train_set, shuffle=True, **loader_args)
@@ -117,9 +120,11 @@ def run(args: DictConfig):
     print("Model initialized")
     
     # 加载预训练权重
-    #pretrained_weights = torch.load('content/drive/MyDrive/DL/最終課題/dl_lecture_competition_pub-MEG-competition/outputs/pretrained_model.pth')
+    #pretrained_weights = torch.load('/content/drive/MyDrive/DL/最終課題/dl_lecture_competition_pub-MEG-competition/outputs/pretrained_model.pth')
+    model.load_pretrained_weights('/content/drive/MyDrive/DL/最終課題/dl_lecture_competition_pub-MEG-competition/outputs/pretrained_model.pth')
     #model.load_state_dict(pretrained_weights, strict=False) 
-    #print("Pretrained weights loaded")
+    #model.load_state_dict(pretrained_weights, strict=True) 
+    print("Pretrained weights loaded")
 
 
     # ------------------

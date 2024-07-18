@@ -1,5 +1,5 @@
 batch_size: 128
-epochs: 30
+epochs: 10
 lr: 0.001
 
 device: cuda:0
@@ -10,4 +10,4 @@ use_wandb: False
 data_dir: data
 
 # Evaluation
-model_path: /content/drive/MyDrive/DL/最終課題/dl_lecture_competition_pub-MEG-competition/outputs/2024-07-17/21-00-23/model_best.pt
+model_path: /content/drive/MyDrive/DL/最終課題/dl_lecture_competition_pub-MEG-competition/outputs/2024-07-18/05-35-29/model_best.pt
